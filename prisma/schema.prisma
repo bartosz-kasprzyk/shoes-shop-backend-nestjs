@@ -1,6 +1,6 @@
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider = "prisma-client-js"
+  // output   = "../generated/prisma"
 }
 
 datasource db {
@@ -29,31 +29,31 @@ model Product {
 
 model Brand {
   id       Int       @id @default(autoincrement())
-  name     String
+  name     String     @unique 
   logo     String?
   products Product[]
 }
 
 model Gender {
   id       Int       @id @default(autoincrement())
-  name     String
+  name     String     @unique
   products Product[]
 }
 
 model Category {
   id       Int       @id @default(autoincrement())
-  name     String
+  name     String   @unique
   products Product[]
 }
 
 model Color {
   id       Int       @id @default(autoincrement())
-  name     String
+  name     String     @unique
   products Product[]
 }
 
 model Size {
   id       Int       @id @default(autoincrement())
-  name     String
+  name     String     @unique
   products Product[] @relation("ProductToSize")
 }
