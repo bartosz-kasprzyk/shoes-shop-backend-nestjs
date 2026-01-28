@@ -21,6 +21,8 @@ model User {
   password String
   firstName String
   lastName String
+  phoneNumber String?
+  avatarId    Int?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
