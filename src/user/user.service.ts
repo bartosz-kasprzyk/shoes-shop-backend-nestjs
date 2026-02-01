@@ -6,14 +6,29 @@ import { PrismaService } from 'src/prisma/prisma.service';
 export class UserService {
   constructor(private prisma: PrismaService) {}
 
-  async updateProfile(userId: number, dto: UpdateUserDto) {
-    const { avatar, ...rest } = dto;
-
+  async updateAvatar(userId: number, mediaId: number) {
     const user = await this.prisma.user.update({
       where: { id: userId },
       data: {
-        ...rest,
-        avatarId: avatar?.id ?? undefined,
+        avatarId: mediaId,
+      },
+      include: {
+        avatar: true,
+      },
+    });
+
+    delete user.password;
+    return user;
+  }
+
+  async updateProfile(userId: number, dto: UpdateUserDto) {
+    const user = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        ...dto,
+      },
+      include: {
+        avatar: true,
       },
     });
 
