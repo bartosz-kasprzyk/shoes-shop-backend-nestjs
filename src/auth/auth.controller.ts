@@ -6,27 +6,47 @@ import {
   HttpStatus,
   Post,
   Query,
+  Res,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { SignupDto, SigninDto } from './dto';
+import {
+  SignupDto,
+  SigninDto,
+  ForgotPasswordDto,
+  ResetPasswordDto,
+} from './dto';
 
-@Controller('api/auth/local')
+@Controller('api/auth')
 export class AuthController {
   constructor(private authService: AuthService) {}
 
-  @Post('register')
+  @Post('local/register')
   signup(@Body() dto: SignupDto) {
     return this.authService.signup(dto);
   }
 
-  @Get('confirm')
-  confirm(@Query('token') token: string) {
-    return this.authService.confirmEmail(token);
+  @Get('local/confirm')
+  async confirmEmail(@Query('token') token: string, @Res() res: any) {
+    await this.authService.confirmEmail(token);
+
+    return res.redirect('http://localhost:3000/sign-in');
   }
 
+  @Post('local')
   @HttpCode(HttpStatus.OK)
-  @Post()
   signin(@Body() dto: SigninDto) {
     return this.authService.signin(dto);
+  }
+
+  @Post('forgot-password')
+  @HttpCode(HttpStatus.OK)
+  forgotPassword(@Body() dto: ForgotPasswordDto) {
+    return this.authService.forgotPassword(dto);
+  }
+
+  @Post('reset-password')
+  @HttpCode(HttpStatus.OK)
+  resetPassword(@Body() dto: ResetPasswordDto) {
+    return this.authService.resetPassword(dto);
   }
 }

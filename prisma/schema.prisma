@@ -15,19 +15,20 @@ datasource db {
 }
 
 model User {
-  id Int @id @default(autoincrement())
-  email String @unique
-  username String
-  password String
-  firstName String
-  lastName String
+  id                  Int @id @default(autoincrement())
+  email               String @unique
+  username            String
+  password            String
+  firstName           String
+  lastName            String
   
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 
-  confirmationToken  String?  @unique
-  resetToken         String?  @unique
-  isConfirmed        Boolean  @default(false)
+  confirmationToken   String?  @unique
+  isConfirmed         Boolean  @default(false)
+  resetToken          String?  @unique
+  resetTokenExpires   DateTime?
 
   @@map("users")
 }

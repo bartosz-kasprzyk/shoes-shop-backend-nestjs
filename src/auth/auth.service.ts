@@ -1,5 +1,14 @@
-import { ForbiddenException, Injectable } from '@nestjs/common';
-import { SignupDto, SigninDto } from './dto';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import {
+  SignupDto,
+  SigninDto,
+  ForgotPasswordDto,
+  ResetPasswordDto,
+} from './dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
 import { PrismaClientKnownRequestError } from 'generated/prisma/internal/prismaNamespace';
@@ -37,8 +46,7 @@ export class AuthService {
       await this.mailerService.sendConfirmationEmail(user.email, token);
 
       return {
-        message:
-          'Signup successful! Please check your email to activate your account.',
+        message: 'Success! Please check your email to activate your account.',
       };
     } catch (error) {
       if (error instanceof PrismaClientKnownRequestError) {
@@ -105,5 +113,52 @@ export class AuthService {
     });
 
     return { jwt: token };
+  }
+
+  async forgotPassword(dto: ForgotPasswordDto) {
+    const user = await this.prisma.user.findUnique({
+      where: { email: dto.email },
+    });
+
+    if (!user) throw new NotFoundException('User not found');
+
+    const token = uuidv4();
+    const expires = new Date(Date.now() + 3600000);
+
+    await this.prisma.user.update({
+      where: { email: dto.email },
+      data: {
+        resetToken: token,
+        resetTokenExpires: expires,
+      },
+    });
+
+    await this.mailerService.sendPasswordResetEmail(user.email, token);
+
+    return { message: 'Reset email sent!' };
+  }
+
+  async resetPassword(dto: ResetPasswordDto) {
+    const user = await this.prisma.user.findFirst({
+      where: {
+        resetToken: dto.code,
+        resetTokenExpires: { gt: new Date() },
+      },
+    });
+
+    if (!user) throw new ForbiddenException('Invalid or expired token');
+
+    const hash = await bcrypt.hash(dto.password, 10);
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        password: hash,
+        resetToken: null,
+        resetTokenExpires: null,
+      },
+    });
+
+    return { message: 'Password successfully updated!' };
   }
 }
