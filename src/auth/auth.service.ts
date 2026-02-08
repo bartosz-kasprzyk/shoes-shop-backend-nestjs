@@ -5,6 +5,8 @@ import * as bcrypt from 'bcrypt';
 import { PrismaClientKnownRequestError } from 'generated/prisma/internal/prismaNamespace';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import { MailerServiceImplementation } from 'src/mailer/mailer.service';
+import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class AuthService {
@@ -12,10 +14,12 @@ export class AuthService {
     private prisma: PrismaService,
     private jwt: JwtService,
     private config: ConfigService,
+    private mailerService: MailerServiceImplementation,
   ) {}
 
   async signup(dto: SignupDto) {
     const hash = await bcrypt.hash(dto.password, 10);
+    const token = uuidv4();
 
     try {
       const user = await this.prisma.user.create({
@@ -25,10 +29,17 @@ export class AuthService {
           firstName: dto.firstName,
           lastName: dto.lastName,
           password: hash,
+          confirmationToken: token,
+          isConfirmed: false,
         },
       });
 
-      return this.signToken(user.id, user.email);
+      await this.mailerService.sendConfirmationEmail(user.email, token);
+
+      return {
+        message:
+          'Signup successful! Please check your email to activate your account.',
+      };
     } catch (error) {
       if (error instanceof PrismaClientKnownRequestError) {
         if (error.code === 'P2002') {
@@ -39,6 +50,24 @@ export class AuthService {
     }
   }
 
+  async confirmEmail(token: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { confirmationToken: token },
+    });
+
+    if (!user) throw new ForbiddenException('Invalid or expired token');
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        isConfirmed: true,
+        confirmationToken: null,
+      },
+    });
+
+    return { message: 'Email confirmed! You can now log in.' };
+  }
+
   async signin(dto: SigninDto) {
     const user = await this.prisma.user.findUnique({
       where: {
@@ -47,9 +76,13 @@ export class AuthService {
     });
 
     if (!user) throw new ForbiddenException('Credentials incorrect');
+    if (!user.isConfirmed) {
+      throw new ForbiddenException(
+        'Please confirm your email before logging in',
+      );
+    }
 
     const pwMatches = await bcrypt.compare(dto.password, user.password);
-
     if (!pwMatches) throw new ForbiddenException('Credentials incorrect');
 
     const tokenObj = await this.signToken(user.id, user.email);
