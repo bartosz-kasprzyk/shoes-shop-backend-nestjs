@@ -27,9 +27,10 @@ model User {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  confirmationToken  String?  @unique
-  resetToken         String?  @unique
-  isConfirmed        Boolean  @default(false)
+  confirmationToken   String?  @unique
+  isConfirmed         Boolean  @default(false)
+  resetToken          String?  @unique
+  resetTokenExpires   DateTime?
 
   @@map("users")
 }
