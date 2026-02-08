@@ -23,8 +23,4 @@ export class UpdateUserDto {
   @ValidateIf((_, value) => value !== '' && value !== null)
   @Matches(/^\+?\d{7,15}$/, { message: 'Invalid phone number' })
   phoneNumber?: string | null;
-
-  @IsOptional()
-  @IsObject()
-  avatar?: { id: number };
 }

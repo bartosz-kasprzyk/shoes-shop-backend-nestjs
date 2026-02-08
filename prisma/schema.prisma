@@ -15,16 +15,25 @@ datasource db {
 }
 
 model User {
-  id Int @id @default(autoincrement())
-  email String @unique
-  username String
-  password String
-  firstName String
-  lastName String
+  id          Int     @id @default(autoincrement())
+  email       String  @unique
+  username    String
+  password    String
+  firstName   String
+  lastName    String
   phoneNumber String?
-  avatarId    Int?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  avatarId    Int?     @unique
+  avatar      Media?   @relation(fields: [avatarId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   @@map("users")
+}
+
+model Media {
+  id        Int      @id @default(autoincrement())
+  url       String   
+  publicId  String  
+  user      User?    @relation
+  createdAt DateTime @default(now())
 }
