@@ -75,7 +75,6 @@ model ProductImage {
 model Brand {
   id       Int       @id @default(autoincrement())
   name     String    @unique 
-  logo     String?
   products Product[]
 }
 

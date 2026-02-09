@@ -1,6 +1,7 @@
 /*
   Warnings:
 
+  - You are about to drop the column `logo` on the `Brand` table. All the data in the column will be lost.
   - You are about to drop the `Product` table. If the table is not empty, all the data it contains will be lost.
 
 */
@@ -19,38 +20,11 @@ ALTER TABLE "Product" DROP CONSTRAINT "Product_genderId_fkey";
 -- DropForeignKey
 ALTER TABLE "_ProductToSize" DROP CONSTRAINT "_ProductToSize_A_fkey";
 
+-- AlterTable
+ALTER TABLE "Brand" DROP COLUMN "logo";
+
 -- DropTable
 DROP TABLE "Product";
-
--- CreateTable
-CREATE TABLE "users" (
-    "id" SERIAL NOT NULL,
-    "email" TEXT NOT NULL,
-    "username" TEXT NOT NULL,
-    "password" TEXT NOT NULL,
-    "firstName" TEXT NOT NULL,
-    "lastName" TEXT NOT NULL,
-    "phoneNumber" TEXT,
-    "avatarId" INTEGER,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-    "confirmationToken" TEXT,
-    "isConfirmed" BOOLEAN NOT NULL DEFAULT false,
-    "resetToken" TEXT,
-    "resetTokenExpires" TIMESTAMP(3),
-
-    CONSTRAINT "users_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "Media" (
-    "id" SERIAL NOT NULL,
-    "url" TEXT NOT NULL,
-    "publicId" TEXT NOT NULL,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "Media_pkey" PRIMARY KEY ("id")
-);
 
 -- CreateTable
 CREATE TABLE "products" (
@@ -77,21 +51,6 @@ CREATE TABLE "ProductImage" (
 
     CONSTRAINT "ProductImage_pkey" PRIMARY KEY ("id")
 );
-
--- CreateIndex
-CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
-
--- CreateIndex
-CREATE UNIQUE INDEX "users_avatarId_key" ON "users"("avatarId");
-
--- CreateIndex
-CREATE UNIQUE INDEX "users_confirmationToken_key" ON "users"("confirmationToken");
-
--- CreateIndex
-CREATE UNIQUE INDEX "users_resetToken_key" ON "users"("resetToken");
-
--- AddForeignKey
-ALTER TABLE "users" ADD CONSTRAINT "users_avatarId_fkey" FOREIGN KEY ("avatarId") REFERENCES "Media"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "products" ADD CONSTRAINT "products_brandId_fkey" FOREIGN KEY ("brandId") REFERENCES "Brand"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
