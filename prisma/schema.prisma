@@ -8,52 +8,97 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Product {
-  id          String   @id @default(uuid())
-  name        String
-  description String
-  price       Int
-  brandId     Int
-  categoryId  Int
-  genderId    Int
-  colorId     Int
-  userId      Int
+model User {
+  id          Int      @id @default(autoincrement())
+  email       String   @unique
+  username    String
+  password    String
+  firstName   String
+  lastName    String
+  phoneNumber String?
+  avatarId    Int?     @unique
+  avatar      Media?   @relation(fields: [avatarId], references: [id])
+
+  products    Product[] 
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  brand       Brand    @relation(fields: [brandId], references: [id])
-  category    Category @relation(fields: [categoryId], references: [id])
-  color       Color    @relation(fields: [colorId], references: [id])
-  gender      Gender   @relation(fields: [genderId], references: [id])
-  sizes       Size[]   @relation("ProductToSize")
+
+  confirmationToken   String?  @unique
+  isConfirmed         Boolean  @default(false)
+  resetToken          String?  @unique
+  resetTokenExpires   DateTime?
+
+  @@map("users")
+}
+
+model Media {
+  id        Int      @id @default(autoincrement())
+  url       String   
+  publicId  String  
+  user      User?    
+  createdAt DateTime @default(now())
+}
+
+model Product {
+  id          String         @id @default(uuid())
+  name        String
+  description String
+  price       Decimal        @db.Decimal(10, 2)
+  images      ProductImage[]
+  sizes       Size[]         @relation("ProductToSize")
+  brandId     Int
+  brand       Brand          @relation(fields: [brandId], references: [id])
+  categoryId  Int
+  category    Category       @relation(fields: [categoryId], references: [id])
+  genderId    Int
+  gender      Gender         @relation(fields: [genderId], references: [id])
+  colorId     Int
+  color       Color          @relation(fields: [colorId], references: [id])
+
+  userId      Int
+  user        User           @relation(fields: [userId], references: [id])
+
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@map("products")
+}
+
+model ProductImage {
+  id        Int     @id @default(autoincrement())
+  url       String  
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 }
 
 model Brand {
   id       Int       @id @default(autoincrement())
-  name     String     @unique 
+  name     String    @unique 
   logo     String?
   products Product[]
 }
 
 model Gender {
   id       Int       @id @default(autoincrement())
-  name     String     @unique
+  name     String    @unique
   products Product[]
 }
 
 model Category {
   id       Int       @id @default(autoincrement())
-  name     String   @unique
+  name     String    @unique
   products Product[]
 }
 
 model Color {
   id       Int       @id @default(autoincrement())
-  name     String     @unique
+  name     String    @unique
   products Product[]
 }
 
 model Size {
   id       Int       @id @default(autoincrement())
-  name     String     @unique
+  name     String    @unique
   products Product[] @relation("ProductToSize")
 }
