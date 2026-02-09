@@ -36,7 +36,7 @@ model Media {
   id        Int      @id @default(autoincrement())
   url       String   
   publicId  String  
-  user      User?    
+  user      User?    @relation
   createdAt DateTime @default(now())
 }
 
