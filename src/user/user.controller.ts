@@ -23,7 +23,7 @@ import { MediaService } from 'src/media/media.service';
 import { FileInterceptor } from '@nestjs/platform-express';
 
 @UseGuards(JwtGuard)
-@Controller('api/users')
+@Controller('users')
 export class UserController {
   constructor(
     private usersService: UserService,

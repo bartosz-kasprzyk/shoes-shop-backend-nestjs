@@ -5,6 +5,7 @@ import { ValidationPipe } from '@nestjs/common';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  app.setGlobalPrefix('api');
   app.enableCors({
     origin: 'http://localhost:3000', // frontend URL
     credentials: true, // if you plan to send cookies
