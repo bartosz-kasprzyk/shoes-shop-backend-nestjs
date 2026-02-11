@@ -5,7 +5,14 @@ import { PrismaService } from 'src/prisma/prisma.service';
 export class SizesService {
   constructor(private prisma: PrismaService) {}
 
-  findAll() {
-    return this.prisma.size.findMany();
+  async findAll() {
+    const sizes = await this.prisma.size.findMany();
+
+    return sizes.map((s) => ({
+      id: s.id,
+      attributes: {
+        value: s.name.toString(),
+      },
+    }));
   }
 }

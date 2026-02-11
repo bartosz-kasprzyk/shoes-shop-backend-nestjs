@@ -5,7 +5,14 @@ import { PrismaService } from 'src/prisma/prisma.service';
 export class GendersService {
   constructor(private prisma: PrismaService) {}
 
-  findAll() {
-    return this.prisma.gender.findMany();
+  async findAll() {
+    const genders = await this.prisma.gender.findMany();
+
+    return genders.map((g) => ({
+      id: g.id,
+      attributes: {
+        name: g.name,
+      },
+    }));
   }
 }

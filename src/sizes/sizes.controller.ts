@@ -6,7 +6,9 @@ export class SizesController {
   constructor(private readonly sizesService: SizesService) {}
 
   @Get()
-  findAll() {
-    return this.sizesService.findAll();
+  async findAll() {
+    const sizes = await this.sizesService.findAll();
+
+    return { data: sizes };
   }
 }

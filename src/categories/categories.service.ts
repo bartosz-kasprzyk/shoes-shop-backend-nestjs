@@ -5,7 +5,14 @@ import { PrismaService } from 'src/prisma/prisma.service';
 export class CategoriesService {
   constructor(private prisma: PrismaService) {}
 
-  findAll() {
-    return this.prisma.category.findMany();
+  async findAll() {
+    const categories = await this.prisma.category.findMany();
+
+    return categories.map((c) => ({
+      id: c.id,
+      attributes: {
+        name: c.name,
+      },
+    }));
   }
 }

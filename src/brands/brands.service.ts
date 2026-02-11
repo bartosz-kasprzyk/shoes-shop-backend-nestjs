@@ -5,7 +5,14 @@ import { PrismaService } from 'src/prisma/prisma.service';
 export class BrandsService {
   constructor(private prisma: PrismaService) {}
 
-  findAll() {
-    return this.prisma.brand.findMany();
+  async findAll() {
+    const brands = await this.prisma.brand.findMany();
+
+    return brands.map((b) => ({
+      id: b.id,
+      attributes: {
+        name: b.name,
+      },
+    }));
   }
 }
