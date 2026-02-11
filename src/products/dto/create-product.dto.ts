@@ -1,29 +1,33 @@
-import { IsArray, IsInt, IsNumber, IsString, IsUrl } from 'class-validator';
+import { IsArray, IsInt, IsNumber, IsString } from 'class-validator';
 
 export class CreateProductDto {
   @IsString()
   name: string;
+
   @IsNumber()
   price: number;
+
   @IsString()
   description: string;
 
   @IsNumber()
-  brandId: number;
+  brand: number;
+
   @IsNumber()
-  colorId: number;
+  color: number;
+
   @IsNumber()
-  categoryId: number;
+  categories: number;
+
   @IsNumber()
-  genderId: number;
+  gender: number;
 
   @IsArray()
   @IsInt({ each: true })
   sizes: number[];
 
   @IsArray()
-  @IsUrl({}, { each: true })
-  images: string[];
+  images: { url: string; id?: number }[];
 
   @IsNumber()
   userID: number;
