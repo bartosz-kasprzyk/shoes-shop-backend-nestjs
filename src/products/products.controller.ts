@@ -6,18 +6,26 @@ import {
   Param,
   Delete,
   Put,
+  UseInterceptors,
+  UploadedFiles,
 } from '@nestjs/common';
 import { ProductsService } from './products.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
+import { FilesInterceptor } from '@nestjs/platform-express';
 
 @Controller('products')
 export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
 
   @Post()
-  create(@Body() createProductDto: CreateProductDto) {
-    return this.productsService.create(createProductDto);
+  @UseInterceptors(FilesInterceptor('files'))
+  async create(
+    @UploadedFiles() files: Express.Multer.File[],
+    @Body('data') data: string,
+  ) {
+    const createProductDto = JSON.parse(data);
+    return this.productsService.create(createProductDto, files);
   }
 
   @Get()
@@ -32,12 +40,14 @@ export class ProductsController {
   }
 
   @Put(':id')
+  @UseInterceptors(FilesInterceptor('files'))
   async update(
     @Param('id') id: string,
-    @Body('data') updateProductDto: UpdateProductDto,
+    @UploadedFiles() files: Express.Multer.File[],
+    @Body('data') data: string,
   ) {
-    const result = await this.productsService.update(id, updateProductDto);
-    return { data: result };
+    const updateProductDto = JSON.parse(data);
+    return this.productsService.update(id, updateProductDto, files);
   }
 
   @Delete(':id')

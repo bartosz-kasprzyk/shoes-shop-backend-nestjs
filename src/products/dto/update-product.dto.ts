@@ -7,4 +7,8 @@ export class UpdateProductDto extends PartialType(CreateProductDto) {
   @IsArray()
   @IsInt({ each: true })
   deletedImageIds?: number[];
+
+  @IsOptional()
+  @IsArray()
+  images?: any[];
 }
