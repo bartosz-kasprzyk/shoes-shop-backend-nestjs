@@ -2,44 +2,153 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { MediaService } from 'src/media/media.service';
 
 @Injectable()
 export class ProductsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private mediaService: MediaService,
+  ) {}
 
-  async create(createProductDto: CreateProductDto) {
-    const { sizes, images, userID, ...rest } = createProductDto;
+  private mapToStrapi(p: any) {
+    return {
+      id: p.id,
+      attributes: {
+        name: p.name,
+        price: Number(p.price),
+        description: p.description,
+        brand: { data: p.brand ? { id: p.brand.id } : null },
+        color: { data: p.color ? { id: p.color.id } : null },
+        gender: { data: p.gender ? { id: p.gender.id } : null },
+        categories: { data: p.category ? [{ id: p.category.id }] : [] },
+        sizes: { data: p.sizes?.map((s) => ({ id: s.id })) || [] },
+        images: {
+          data:
+            p.images?.map((img) => ({
+              id: img.id,
+              attributes: { url: img.media.url },
+            })) || [],
+        },
+      },
+    };
+  }
 
-    return console.log('created product');
+  async create(dto: CreateProductDto, files: Express.Multer.File[]) {
+    const { sizes, userID, brand, categories, color, gender, ...rest } = dto;
+
+    const uploadedMedia = await Promise.all(
+      files.map((file) => this.mediaService.uploadImage(file)),
+    );
+
+    const product = await this.prisma.product.create({
+      data: {
+        ...rest,
+        user: { connect: { id: +userID } },
+        brand: { connect: { id: +brand } },
+        category: { connect: { id: +categories } },
+        color: { connect: { id: +color } },
+        gender: { connect: { id: +gender } },
+        sizes: { connect: sizes.map((id) => ({ id: +id })) },
+        images: {
+          create: uploadedMedia.map((media) => ({ mediaId: media.id })),
+        },
+      },
+      include: {
+        images: { include: { media: true } },
+        brand: true,
+        category: true,
+        color: true,
+        gender: true,
+        sizes: true,
+      },
+    });
+
+    return this.mapToStrapi(product);
   }
 
   async findAll() {
-    return this.prisma.product.findMany({
+    const products = await this.prisma.product.findMany({
       include: {
-        images: true,
+        images: { include: { media: true } },
         brand: true,
-        sizes: true,
-        color: true,
         category: true,
+        color: true,
+        gender: true,
+        sizes: true,
       },
     });
+
+    return products.map((p) => this.mapToStrapi(p));
   }
 
   async findOne(id: string) {
-    return this.prisma.product.findUnique({
+    const p = await this.prisma.product.findUnique({
       where: { id },
-      include: { images: true, sizes: true, brand: true, color: true },
+      include: {
+        images: { include: { media: true } },
+        brand: true,
+        category: true,
+        color: true,
+        gender: true,
+        sizes: true,
+      },
     });
+
+    if (!p) throw new NotFoundException(`Product not found`);
+
+    return this.mapToStrapi(p);
   }
 
-  async update(id: string, updateProductDto: UpdateProductDto) {
-    const product = await this.prisma.product.findUnique({ where: { id } });
+  async update(
+    id: string,
+    updateProductDto: UpdateProductDto,
+    files: Express.Multer.File[],
+  ) {
+    const {
+      sizes,
+      images,
+      brand,
+      categories,
+      color,
+      gender,
+      deletedImageIds,
+      ...rest
+    } = updateProductDto;
 
-    if (!product) {
-      throw new NotFoundException(`Product with ID ${id} not found`);
-    }
+    const newUploadedMedia = await Promise.all(
+      files.map((file) => this.mediaService.uploadImage(file)),
+    );
 
-    return console.log('updated product');
+    const product = await this.prisma.product.update({
+      where: { id },
+      data: {
+        ...rest,
+        ...(brand && { brand: { connect: { id: +brand } } }),
+        ...(categories && { category: { connect: { id: +categories } } }),
+        ...(color && { color: { connect: { id: +color } } }),
+        ...(gender && { gender: { connect: { id: +gender } } }),
+        ...(sizes && { sizes: { set: sizes.map((sid) => ({ id: +sid })) } }),
+        images: {
+          ...(deletedImageIds && {
+            deleteMany: { id: { in: deletedImageIds.map((did) => +did) } },
+          }),
+          create: newUploadedMedia.map((media) => ({
+            media: { connect: { id: media.id } },
+          })),
+        },
+      },
+      include: {
+        images: { include: { media: true } },
+        brand: true,
+        category: true,
+        color: true,
+        gender: true,
+        sizes: true,
+      },
+    });
+
+    return this.mapToStrapi(product);
   }
 
   async remove(id: string) {

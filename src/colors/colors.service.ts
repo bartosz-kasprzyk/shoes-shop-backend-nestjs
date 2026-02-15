@@ -5,7 +5,14 @@ import { PrismaService } from 'src/prisma/prisma.service';
 export class ColorsService {
   constructor(private prisma: PrismaService) {}
 
-  findAll() {
-    return this.prisma.color.findMany();
+  async findAll() {
+    const colors = await this.prisma.color.findMany();
+
+    return colors.map((c) => ({
+      id: c.id,
+      attributes: {
+        name: c.name,
+      },
+    }));
   }
 }

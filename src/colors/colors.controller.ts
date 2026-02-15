@@ -6,7 +6,9 @@ export class ColorsController {
   constructor(private readonly colorsService: ColorsService) {}
 
   @Get()
-  findAll() {
-    return this.colorsService.findAll();
+  async findAll() {
+    const colors = await this.colorsService.findAll();
+
+    return { data: colors };
   }
 }

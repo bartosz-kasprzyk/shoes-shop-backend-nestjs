@@ -6,7 +6,9 @@ export class BrandsController {
   constructor(private readonly brandsService: BrandsService) {}
 
   @Get()
-  findAll() {
-    return this.brandsService.findAll();
+  async findAll() {
+    const brands = await this.brandsService.findAll();
+
+    return { data: brands };
   }
 }

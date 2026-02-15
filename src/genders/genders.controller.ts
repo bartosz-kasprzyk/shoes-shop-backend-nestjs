@@ -6,7 +6,9 @@ export class GendersController {
   constructor(private readonly gendersService: GendersService) {}
 
   @Get()
-  findAll() {
-    return this.gendersService.findAll();
+  async findAll() {
+    const genders = await this.gendersService.findAll();
+
+    return { data: genders };
   }
 }

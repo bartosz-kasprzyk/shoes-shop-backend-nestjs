@@ -1,6 +1,6 @@
 generator client {
   provider = "prisma-client-js"
-  // output   = "../generated/prisma"
+  output   = "../generated/prisma"
 }
 
 datasource db {
@@ -33,11 +33,12 @@ model User {
 }
 
 model Media {
-  id        Int      @id @default(autoincrement())
-  url       String   
-  publicId  String  
-  user      User?    @relation
-  createdAt DateTime @default(now())
+  id            Int             @id @default(autoincrement())
+  url           String   
+  publicId      String  
+  user          User?           @relation
+  productImages ProductImage[]
+  createdAt     DateTime        @default(now())
 }
 
 model Product {
@@ -67,7 +68,8 @@ model Product {
 
 model ProductImage {
   id        Int     @id @default(autoincrement())
-  url       String  
+  mediaId   Int
+  media     Media   @relation(fields: [mediaId], references: [id], onDelete: Cascade)
   productId String
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 }
