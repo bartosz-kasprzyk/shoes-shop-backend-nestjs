@@ -11,11 +11,11 @@ import {
 } from './dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
-import { PrismaClientKnownRequestError } from 'generated/prisma/internal/prismaNamespace';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { MailerServiceImplementation } from 'src/mailer/mailer.service';
 import { v4 as uuidv4 } from 'uuid';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 
 @Injectable()
 export class AuthService {
