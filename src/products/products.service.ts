@@ -18,18 +18,70 @@ export class ProductsService {
         name: p.name,
         price: Number(p.price),
         description: p.description,
-        brand: { data: p.brand ? { id: p.brand.id } : null },
-        color: { data: p.color ? { id: p.color.id } : null },
-        gender: { data: p.gender ? { id: p.gender.id } : null },
-        categories: { data: p.category ? [{ id: p.category.id }] : [] },
-        sizes: { data: p.sizes?.map((s) => ({ id: s.id })) || [] },
-        images: {
+        brand: {
+          data: p.brand
+            ? {
+                id: p.brand.id,
+                attributes: {
+                  name: p.brand.name,
+                },
+              }
+            : null,
+        },
+        color: {
+          data: p.color
+            ? {
+                id: p.color.id,
+                attributes: {
+                  name: p.color.name,
+                },
+              }
+            : null,
+        },
+        gender: {
+          data: p.gender
+            ? {
+                id: p.gender.id,
+                attributes: {
+                  name: p.gender.name,
+                },
+              }
+            : null,
+        },
+        categories: {
+          data: p.category
+            ? [
+                {
+                  id: p.category.id,
+                  attributes: {
+                    name: p.category.name,
+                  },
+                },
+              ]
+            : [],
+        },
+        sizes: {
           data:
-            p.images?.map((img) => ({
-              id: img.id,
-              attributes: { url: img.media.url },
+            p.sizes?.map((s: any) => ({
+              id: s.id,
+              attributes: {
+                value: Number(s.name),
+              },
             })) || [],
         },
+        images: {
+          data:
+            p.images?.map((img: any) => ({
+              id: img.id,
+              attributes: {
+                url: img.media?.url || '',
+              },
+            })) || [],
+        },
+        userID: String(p.userId),
+        teamName: 'team-5',
+        createdAt: p.createdAt,
+        updatedAt: p.updatedAt,
       },
     };
   }
