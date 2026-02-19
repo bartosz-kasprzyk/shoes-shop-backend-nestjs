@@ -1,26 +1,33 @@
 import {
   Controller,
+  Delete,
+  Param,
   Post,
-  UploadedFile,
+  UploadedFiles,
   UseInterceptors,
 } from '@nestjs/common';
 import { MediaService } from './media.service';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FilesInterceptor } from '@nestjs/platform-express';
 
 @Controller('upload')
 export class MediaController {
   constructor(private readonly mediaService: MediaService) {}
 
   @Post()
-  @UseInterceptors(FileInterceptor('files'))
-  async upload(@UploadedFile() file: Express.Multer.File) {
-    const media = await this.mediaService.uploadImage(file);
+  @UseInterceptors(FilesInterceptor('files'))
+  async uploadFiles(@UploadedFiles() files: Express.Multer.File[]) {
+    const uploadedMedia = await Promise.all(
+      files.map((file) => this.mediaService.uploadImage(file)),
+    );
 
-    return [
-      {
-        id: media.id,
-        url: media.url,
-      },
-    ];
+    return uploadedMedia.map((media) => ({
+      id: media.id,
+      url: media.url,
+    }));
+  }
+
+  @Delete('files/:id')
+  async deleteFile(@Param('id') id: string) {
+    return this.mediaService.deleteImage(+id);
   }
 }

@@ -1,6 +1,4 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { CreateProductDto } from './dto/create-product.dto';
-import { UpdateProductDto } from './dto/update-product.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { MediaService } from 'src/media/media.service';
 
@@ -86,24 +84,54 @@ export class ProductsService {
     };
   }
 
-  async create(dto: CreateProductDto, files: Express.Multer.File[]) {
-    const { sizes, userID, brand, categories, color, gender, ...rest } = dto;
+  async create(input: any, files: Express.Multer.File[] = []) {
+    const dto = input.data;
 
+    const { deletedImageIds, ...cleanedDto } = dto;
+    const {
+      sizes,
+      userID,
+      brand,
+      categories,
+      color,
+      gender,
+      images,
+      teamName,
+      ...rest
+    } = cleanedDto;
+
+    const safeFiles = files || [];
     const uploadedMedia = await Promise.all(
-      files.map((file) => this.mediaService.uploadImage(file)),
+      safeFiles.map((file) => this.mediaService.uploadImage(file)),
     );
+    const newMediaIds = uploadedMedia.map((m) => m.id);
+
+    const existingImageIds = Array.isArray(images)
+      ? images
+      : images
+        ? [images]
+        : [];
+
+    const allMediaIds = [
+      ...newMediaIds,
+      ...existingImageIds.map((id: any) => +id),
+    ];
+
+    const sizesArray = Array.isArray(sizes) ? sizes : sizes ? [sizes] : [];
 
     const product = await this.prisma.product.create({
       data: {
         ...rest,
-        user: { connect: { id: +userID } },
-        brand: { connect: { id: +brand } },
-        category: { connect: { id: +categories } },
-        color: { connect: { id: +color } },
-        gender: { connect: { id: +gender } },
-        sizes: { connect: sizes.map((id) => ({ id: +id })) },
+        ...(userID && { user: { connect: { id: +userID } } }),
+        ...(brand && { brand: { connect: { id: +brand } } }),
+        ...(categories && { category: { connect: { id: +categories } } }),
+        ...(color && { color: { connect: { id: +color } } }),
+        ...(gender && { gender: { connect: { id: +gender } } }),
+        sizes: {
+          connect: sizesArray.map((id) => ({ id: +id })),
+        },
         images: {
-          create: uploadedMedia.map((media) => ({ mediaId: media.id })),
+          create: allMediaIds.map((id) => ({ mediaId: id })),
         },
       },
       include: {
@@ -116,7 +144,7 @@ export class ProductsService {
       },
     });
 
-    return this.mapToStrapi(product);
+    return { data: this.mapToStrapi(product) };
   }
 
   async findAll() {
@@ -134,7 +162,7 @@ export class ProductsService {
     return products.map((p) => this.mapToStrapi(p));
   }
 
-  async findOne(id: string) {
+  async findOne(id: number) {
     const p = await this.prisma.product.findUnique({
       where: { id },
       include: {
@@ -152,58 +180,107 @@ export class ProductsService {
     return this.mapToStrapi(p);
   }
 
-  async update(
-    id: string,
-    updateProductDto: UpdateProductDto,
-    files: Express.Multer.File[],
-  ) {
+  async update(id: number, dto: any, files: Express.Multer.File[] = []) {
     const {
+      deletedImageIds,
       sizes,
-      images,
+      userID,
       brand,
       categories,
       color,
       gender,
-      deletedImageIds,
+      images,
+      teamName,
       ...rest
-    } = updateProductDto;
+    } = dto;
 
-    const newUploadedMedia = await Promise.all(
-      files.map((file) => this.mediaService.uploadImage(file)),
+    // Parse IDs from frontend
+    const incomingIds = (
+      Array.isArray(images) ? images : images ? [images] : []
+    ).map(Number);
+    const toDeleteManual = (
+      Array.isArray(deletedImageIds)
+        ? deletedImageIds
+        : deletedImageIds
+          ? [deletedImageIds]
+          : []
+    ).map(Number);
+    const sizesArray = (
+      Array.isArray(sizes) ? sizes : sizes ? [sizes] : []
+    ).map(Number);
+
+    // Upload brand new files
+    const uploadedMedia = await Promise.all(
+      files.map((f) => this.mediaService.uploadImage(f)),
+    );
+    const newMediaIds = uploadedMedia.map((m) => m.id);
+
+    // Get current database state
+    const currentLinks = await this.prisma.productImage.findMany({
+      where: { productId: id },
+      select: { mediaId: true },
+    });
+    const currentMediaIds = currentLinks.map((l) => l.mediaId);
+
+    // Delete: Anything in DB that is not in incomingIds or is in toDeleteManual
+    const idsToRemove = currentMediaIds.filter(
+      (id) => !incomingIds.includes(id) || toDeleteManual.includes(id),
     );
 
-    const product = await this.prisma.product.update({
-      where: { id },
-      data: {
-        ...rest,
-        ...(brand && { brand: { connect: { id: +brand } } }),
-        ...(categories && { category: { connect: { id: +categories } } }),
-        ...(color && { color: { connect: { id: +color } } }),
-        ...(gender && { gender: { connect: { id: +gender } } }),
-        ...(sizes && { sizes: { set: sizes.map((sid) => ({ id: +sid })) } }),
-        images: {
-          ...(deletedImageIds && {
-            deleteMany: { id: { in: deletedImageIds.map((did) => +did) } },
-          }),
-          create: newUploadedMedia.map((media) => ({
-            media: { connect: { id: media.id } },
-          })),
-        },
-      },
-      include: {
-        images: { include: { media: true } },
-        brand: true,
-        category: true,
-        color: true,
-        gender: true,
-        sizes: true,
-      },
-    });
+    // Add the new uploads + anything incoming that isn't already linked
+    const idsToAdd = [
+      ...newMediaIds,
+      ...incomingIds.filter((id) => !currentMediaIds.includes(id)),
+    ];
 
-    return this.mapToStrapi(product);
+    return await this.prisma.$transaction(async (tx) => {
+      if (idsToRemove.length > 0) {
+        await tx.productImage.deleteMany({
+          where: { productId: id, mediaId: { in: idsToRemove } },
+        });
+      }
+
+      if (idsToAdd.length > 0) {
+        await tx.productImage.createMany({
+          data: idsToAdd.map((mId) => ({ productId: id, mediaId: mId })),
+          skipDuplicates: true,
+        });
+      }
+
+      const product = await tx.product.update({
+        where: { id },
+        data: {
+          ...rest,
+          price: rest.price ? +rest.price : undefined,
+          brand: brand ? { connect: { id: +brand } } : undefined,
+          category: categories ? { connect: { id: +categories } } : undefined,
+          color: color ? { connect: { id: +color } } : undefined,
+          gender: gender ? { connect: { id: +gender } } : undefined,
+          user: userID ? { connect: { id: +userID } } : undefined,
+          sizes: { set: sizesArray.map((sId) => ({ id: sId })) },
+        },
+        include: {
+          images: { include: { media: true }, orderBy: { id: 'asc' } },
+          brand: true,
+          category: true,
+          color: true,
+          gender: true,
+          sizes: true,
+        },
+      });
+
+      // Cleanup physical media
+      if (toDeleteManual.length > 0) {
+        await tx.media
+          .deleteMany({ where: { id: { in: toDeleteManual } } })
+          .catch(() => null);
+      }
+
+      return { data: this.mapToStrapi(product) };
+    });
   }
 
-  async remove(id: string) {
+  async remove(id: number) {
     const product = await this.prisma.product.findUnique({ where: { id } });
 
     if (!product) {

@@ -31,4 +31,15 @@ export class MediaService {
       upload.end(file.buffer);
     });
   }
+
+  async deleteImage(id: number) {
+    const media = await this.prisma.media.findUnique({ where: { id } });
+    if (!media) return { message: 'Already gone' };
+
+    if (media.publicId) {
+      await cloudinary.uploader.destroy(media.publicId);
+    }
+
+    return this.prisma.media.delete({ where: { id } });
+  }
 }
