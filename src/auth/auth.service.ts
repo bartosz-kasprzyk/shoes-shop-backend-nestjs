@@ -81,6 +81,9 @@ export class AuthService {
       where: {
         email: dto.identifier,
       },
+      include: {
+        avatar: true,
+      },
     });
 
     if (!user) throw new ForbiddenException('Credentials incorrect');
@@ -97,6 +100,19 @@ export class AuthService {
 
     return {
       jwt: tokenObj.jwt,
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        phoneNumber: user.phoneNumber,
+        avatar: user.avatar
+          ? {
+              url: user.avatar.url,
+            }
+          : null,
+      },
     };
   }
 
