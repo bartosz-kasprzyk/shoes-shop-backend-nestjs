@@ -8,10 +8,9 @@ import {
   Put,
   UseInterceptors,
   UploadedFiles,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { ProductsService } from './products.service';
-import { CreateProductDto } from './dto/create-product.dto';
-import { UpdateProductDto } from './dto/update-product.dto';
 import { FilesInterceptor } from '@nestjs/platform-express';
 
 @Controller('products')
@@ -21,11 +20,10 @@ export class ProductsController {
   @Post()
   @UseInterceptors(FilesInterceptor('files'))
   async create(
+    @Body() dto: any,
     @UploadedFiles() files: Express.Multer.File[],
-    @Body('data') data: string,
   ) {
-    const createProductDto = JSON.parse(data);
-    return this.productsService.create(createProductDto, files);
+    return this.productsService.create(dto, files);
   }
 
   @Get()
@@ -35,23 +33,25 @@ export class ProductsController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.productsService.findOne(id);
+  async findOne(@Param('id', ParseIntPipe) id: number) {
+    const product = await this.productsService.findOne(id);
+    return { data: product };
   }
 
   @Put(':id')
   @UseInterceptors(FilesInterceptor('files'))
   async update(
-    @Param('id') id: string,
-    @UploadedFiles() files: Express.Multer.File[],
-    @Body('data') data: string,
+    @Param('id', ParseIntPipe) id: number,
+    @UploadedFiles() files: Express.Multer.File[] = [],
+    @Body() dto: any,
   ) {
-    const updateProductDto = JSON.parse(data);
+    const updateProductDto = dto.data ? dto.data : dto;
+
     return this.productsService.update(id, updateProductDto, files);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
+  remove(@Param('id', ParseIntPipe) id: number) {
     return this.productsService.remove(id);
   }
 }
