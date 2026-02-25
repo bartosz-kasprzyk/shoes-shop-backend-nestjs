@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { MediaService } from 'src/media/media.service';
+import * as qs from 'qs';
 
 @Injectable()
 export class ProductsService {
@@ -147,8 +148,75 @@ export class ProductsService {
     return { data: this.mapToStrapi(product) };
   }
 
-  async findAll() {
-    const products = await this.prisma.product.findMany({
+
+async findAll(rawQuery: any) {
+  const query = qs.parse(qs.stringify(rawQuery)) as any;
+  const filters = query.filters || {};
+  
+  const page = parseInt(query.pagination?.page) || 1;
+  const pageSize = parseInt(query.pagination?.pageSize) || 24;
+  const skip = (page - 1) * pageSize;
+
+  let orderBy: any = { createdAt: 'desc' };
+  if (query.sort) {
+    if (typeof query.sort === 'object') {
+      orderBy = query.sort;
+    } else if (typeof query.sort === 'string' && query.sort.includes(':')) {
+      const [field, order] = query.sort.split(':');
+      orderBy = { [field]: order.toLowerCase() };
+    }
+  }
+
+  const where: any = {};
+
+  let minPrice: number | null = null;
+  let maxPrice: number | null = null;
+
+  // We only look for price inside specific price keys or the $and array
+  if (filters.price) {
+    minPrice = parseFloat(filters.price.$gte || filters.price.gte);
+    maxPrice = parseFloat(filters.price.$lte || filters.price.lte);
+  } else if (filters.$and) {
+    // We search the $and array specifically for price objects
+    const priceFilters = filters.$and.flat().filter((item: any) => item?.price);
+    priceFilters.forEach((item: any) => {
+      if (item.price.$gte || item.price.gte) minPrice = parseFloat(item.price.$gte || item.price.gte);
+      if (item.price.$lte || item.price.lte) maxPrice = parseFloat(item.price.$lte || item.price.lte);
+    });
+  }
+
+  if (minPrice !== null && maxPrice !== null && !isNaN(minPrice) && !isNaN(maxPrice)) {
+    // The "Swap" still happens here, but only for price numbers
+    where.price = {
+      gte: Math.min(minPrice, maxPrice),
+      lte: Math.max(minPrice, maxPrice),
+    };
+  }
+
+  if (filters.categories?.id) {
+    const ids = Object.values(filters.categories.id).map(Number);
+    where.category = { id: { in: ids } };
+  }
+
+  if (filters.sizes?.id) {
+    const ids = Object.values(filters.sizes.id).map(Number);
+    where.sizes = { some: { id: { in: ids } } };
+  }
+
+  if (filters.brand?.id) where.brandId = { in: Object.values(filters.brand.id).map(Number) };
+  if (filters.color?.id) where.colorId = { in: Object.values(filters.color.id).map(Number) };
+  if (filters.gender?.id) where.genderId = { in: Object.values(filters.gender.id).map(Number) };
+
+  if (filters.name?.$contains) {
+    where.name = { contains: filters.name.$contains, mode: 'insensitive' };
+  }
+
+  const [products, total] = await Promise.all([
+    this.prisma.product.findMany({
+      where,
+      orderBy,
+      take: pageSize,
+      skip: skip,
       include: {
         images: { include: { media: true } },
         brand: true,
@@ -157,10 +225,18 @@ export class ProductsService {
         gender: true,
         sizes: true,
       },
-    });
+    }),
+    this.prisma.product.count({ where }),
+  ]);
 
-    return products.map((p) => this.mapToStrapi(p));
-  }
+  return {
+    data: products.map((p) => this.mapToStrapi(p)),
+    meta: {
+      pagination: { page, pageSize, total, pageCount: Math.ceil(total / pageSize) },
+    },
+  };
+}
+
 
   async findOne(id: number) {
     const p = await this.prisma.product.findUnique({

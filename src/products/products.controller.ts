@@ -9,6 +9,7 @@ import {
   UseInterceptors,
   UploadedFiles,
   ParseIntPipe,
+  Query,
 } from '@nestjs/common';
 import { ProductsService } from './products.service';
 import { FilesInterceptor } from '@nestjs/platform-express';
@@ -27,9 +28,8 @@ export class ProductsController {
   }
 
   @Get()
-  async findAll() {
-    const products = await this.productsService.findAll();
-    return { data: products };
+  async findAll(@Query() query: any) {
+    return this.productsService.findAll(query);
   }
 
   @Get(':id')
