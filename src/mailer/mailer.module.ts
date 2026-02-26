@@ -9,15 +9,15 @@ import { join } from 'path';
     MailerModule.forRoot({
       transport: {
         host: process.env.MAIL_HOST,
-        port: Number(process.env.MAIL_PORT) || 587,
-        secure: false,
+        port: Number(process.env.MAIL_PORT),
+        secure: true,
         auth: {
           user: process.env.MAIL_USER,
           pass: process.env.MAIL_PASS,
         },
       },
       defaults: {
-        from: '"No Reply" <noreply@shoes-shop.com>',
+        from: '"Shoes Shop" <bartosz.kasprzyk58@gmail.com>',
       },
       template: {
         dir: join(process.cwd(), 'dist/mailer/templates'),
