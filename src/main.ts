@@ -8,6 +8,7 @@ async function bootstrap() {
   app.setGlobalPrefix('api');
   app.enableCors({
     origin: process.env.FRONTEND_URL,
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true, // if you plan to send cookies
   });
   app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
