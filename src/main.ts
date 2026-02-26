@@ -7,7 +7,7 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.setGlobalPrefix('api');
   app.enableCors({
-    origin: 'http://localhost:3000', // frontend URL
+    origin: process.env.FRONTEND_URL,
     credentials: true, // if you plan to send cookies
   });
   app.useGlobalPipes(new ValidationPipe({ whitelist: true }));

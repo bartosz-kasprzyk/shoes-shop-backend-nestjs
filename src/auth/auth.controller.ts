@@ -29,7 +29,7 @@ export class AuthController {
   async confirmEmail(@Query('token') token: string, @Res() res: any) {
     await this.authService.confirmEmail(token);
 
-    return res.redirect('http://localhost:3000/sign-in');
+    return res.redirect(`${process.env.FRONTEND_URL}/sign-in`);
   }
 
   @Post('local')

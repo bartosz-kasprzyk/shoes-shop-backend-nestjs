@@ -17,7 +17,7 @@ export class MailerServiceImplementation {
   }
 
   async sendPasswordResetEmail(email: string, code: string) {
-    const url = `http://localhost:3000/reset-password?code=${code}`;
+    const url = `${process.env.FRONTEND_URL}/reset-password?code=${code}`;
 
     await this.mailerService.sendMail({
       to: email,
