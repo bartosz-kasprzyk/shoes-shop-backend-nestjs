@@ -6,7 +6,8 @@ export class MailerServiceImplementation {
   constructor(private readonly mailerService: MailerService) {}
 
   async sendConfirmationEmail(email: string, token: string) {
-    const url = `http://localhost:3333/api/auth/local/confirm?token=${token}`;
+    const backendUrl = process.env.BACKEND_URL || 'http://localhost:3333';
+    const url = `${backendUrl}/api/auth/local/confirm?token=${token}`;
 
     await this.mailerService.sendMail({
       to: email,
@@ -23,7 +24,7 @@ export class MailerServiceImplementation {
       to: email,
       subject: 'Reset your password - Shoes Shop',
       template: './reset-password',
-      context: { url },
+      context: { url }
     });
   }
 }

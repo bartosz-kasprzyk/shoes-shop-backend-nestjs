@@ -8,12 +8,13 @@ import { join } from 'path';
   imports: [
     MailerModule.forRoot({
       transport: {
-        host: process.env.MAIL_HOST,
-        port: Number(process.env.MAIL_PORT),
-        secure: true,
+        service: 'gmail',
         auth: {
+          type: 'OAuth2',
           user: process.env.MAIL_USER,
-          pass: process.env.MAIL_PASS,
+          clientId: process.env.GOOGLE_CLIENT_ID,
+          clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+          refreshToken: process.env.GOOGLE_REFRESH_TOKEN,
         },
       },
       defaults: {
