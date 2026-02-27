@@ -43,7 +43,11 @@ export class AuthService {
         },
       });
 
-      await this.mailerService.sendConfirmationEmail(user.email, token);
+      this.mailerService
+        .sendConfirmationEmail(user.email, token)
+        .catch((err) => {
+          console.error('Email failed to send, but user was created:', err);
+        });
 
       return {
         message: 'Success! Please check your email to activate your account.',
@@ -149,7 +153,11 @@ export class AuthService {
       },
     });
 
-    await this.mailerService.sendPasswordResetEmail(user.email, token);
+    this.mailerService
+      .sendPasswordResetEmail(user.email, token)
+      .catch((err) => {
+        console.error('Email failed to send, but user was created:', err);
+      });
 
     return { message: 'Reset email sent!' };
   }
