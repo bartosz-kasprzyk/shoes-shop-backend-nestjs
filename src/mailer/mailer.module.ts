@@ -8,6 +8,9 @@ import { join } from 'path';
   imports: [
     MailerModule.forRoot({
       transport: {
+        host: 'smtp.gmail.com',
+        port: 465,
+        secure: true, 
         service: 'gmail',
         auth: {
           type: 'OAuth2',
