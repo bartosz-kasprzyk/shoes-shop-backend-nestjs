@@ -9,15 +9,17 @@ import { join } from 'path';
     MailerModule.forRoot({
       transport: {
         host: 'smtp.gmail.com',
-        port: 465,
-        secure: true, 
-        service: 'gmail',
+        port: 587,
+        secure: false,
         auth: {
           type: 'OAuth2',
           user: process.env.MAIL_USER,
           clientId: process.env.GOOGLE_CLIENT_ID,
           clientSecret: process.env.GOOGLE_CLIENT_SECRET,
           refreshToken: process.env.GOOGLE_REFRESH_TOKEN,
+        },
+        tls: {
+          rejectUnauthorized: false,
         },
       },
       defaults: {
