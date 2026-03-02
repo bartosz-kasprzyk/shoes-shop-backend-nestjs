@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { MediaService } from 'src/media/media.service';
 import * as qs from 'qs';
@@ -71,7 +75,7 @@ export class ProductsService {
         images: {
           data:
             p.images?.map((img: any) => ({
-              id: img.id,
+              id: img.media?.id,
               attributes: {
                 url: img.media?.url || '',
               },
@@ -148,95 +152,110 @@ export class ProductsService {
     return { data: this.mapToStrapi(product) };
   }
 
+  async findAll(rawQuery: any) {
+    const query = qs.parse(qs.stringify(rawQuery)) as any;
+    const filters = query.filters || {};
 
-async findAll(rawQuery: any) {
-  const query = qs.parse(qs.stringify(rawQuery)) as any;
-  const filters = query.filters || {};
-  
-  const page = parseInt(query.pagination?.page) || 1;
-  const pageSize = parseInt(query.pagination?.pageSize) || 24;
-  const skip = (page - 1) * pageSize;
+    const page = parseInt(query.pagination?.page) || 1;
+    const pageSize = parseInt(query.pagination?.pageSize) || 24;
+    const skip = (page - 1) * pageSize;
 
-  let orderBy: any = { createdAt: 'desc' };
-  if (query.sort) {
-    if (typeof query.sort === 'object') {
-      orderBy = query.sort;
-    } else if (typeof query.sort === 'string' && query.sort.includes(':')) {
-      const [field, order] = query.sort.split(':');
-      orderBy = { [field]: order.toLowerCase() };
+    let orderBy: any = { createdAt: 'desc' };
+    if (query.sort) {
+      if (typeof query.sort === 'object') {
+        orderBy = query.sort;
+      } else if (typeof query.sort === 'string' && query.sort.includes(':')) {
+        const [field, order] = query.sort.split(':');
+        orderBy = { [field]: order.toLowerCase() };
+      }
     }
-  }
 
-  const where: any = {};
+    const where: any = {};
 
-  let minPrice: number | null = null;
-  let maxPrice: number | null = null;
+    let minPrice: number | null = null;
+    let maxPrice: number | null = null;
 
-  // We only look for price inside specific price keys or the $and array
-  if (filters.price) {
-    minPrice = parseFloat(filters.price.$gte || filters.price.gte);
-    maxPrice = parseFloat(filters.price.$lte || filters.price.lte);
-  } else if (filters.$and) {
-    // We search the $and array specifically for price objects
-    const priceFilters = filters.$and.flat().filter((item: any) => item?.price);
-    priceFilters.forEach((item: any) => {
-      if (item.price.$gte || item.price.gte) minPrice = parseFloat(item.price.$gte || item.price.gte);
-      if (item.price.$lte || item.price.lte) maxPrice = parseFloat(item.price.$lte || item.price.lte);
-    });
-  }
+    // We only look for price inside specific price keys or the $and array
+    if (filters.price) {
+      minPrice = parseFloat(filters.price.$gte || filters.price.gte);
+      maxPrice = parseFloat(filters.price.$lte || filters.price.lte);
+    } else if (filters.$and) {
+      // We search the $and array specifically for price objects
+      const priceFilters = filters.$and
+        .flat()
+        .filter((item: any) => item?.price);
+      priceFilters.forEach((item: any) => {
+        if (item.price.$gte || item.price.gte)
+          minPrice = parseFloat(item.price.$gte || item.price.gte);
+        if (item.price.$lte || item.price.lte)
+          maxPrice = parseFloat(item.price.$lte || item.price.lte);
+      });
+    }
 
-  if (minPrice !== null && maxPrice !== null && !isNaN(minPrice) && !isNaN(maxPrice)) {
-    // The "Swap" still happens here, but only for price numbers
-    where.price = {
-      gte: Math.min(minPrice, maxPrice),
-      lte: Math.max(minPrice, maxPrice),
+    if (
+      minPrice !== null &&
+      maxPrice !== null &&
+      !isNaN(minPrice) &&
+      !isNaN(maxPrice)
+    ) {
+      // The "Swap" still happens here, but only for price numbers
+      where.price = {
+        gte: Math.min(minPrice, maxPrice),
+        lte: Math.max(minPrice, maxPrice),
+      };
+    }
+
+    if (filters.categories?.id) {
+      const ids = Object.values(filters.categories.id).map(Number);
+      where.category = { id: { in: ids } };
+    }
+
+    if (filters.sizes?.id) {
+      const ids = Object.values(filters.sizes.id).map(Number);
+      where.sizes = { some: { id: { in: ids } } };
+    }
+
+    if (filters.brand?.id)
+      where.brandId = { in: Object.values(filters.brand.id).map(Number) };
+    if (filters.color?.id)
+      where.colorId = { in: Object.values(filters.color.id).map(Number) };
+    if (filters.gender?.id)
+      where.genderId = { in: Object.values(filters.gender.id).map(Number) };
+
+    if (filters.name?.$contains) {
+      where.name = { contains: filters.name.$contains, mode: 'insensitive' };
+    }
+
+    const [products, total] = await Promise.all([
+      this.prisma.product.findMany({
+        where,
+        orderBy,
+        take: pageSize,
+        skip: skip,
+        include: {
+          images: { include: { media: true } },
+          brand: true,
+          category: true,
+          color: true,
+          gender: true,
+          sizes: true,
+        },
+      }),
+      this.prisma.product.count({ where }),
+    ]);
+
+    return {
+      data: products.map((p) => this.mapToStrapi(p)),
+      meta: {
+        pagination: {
+          page,
+          pageSize,
+          total,
+          pageCount: Math.ceil(total / pageSize),
+        },
+      },
     };
   }
-
-  if (filters.categories?.id) {
-    const ids = Object.values(filters.categories.id).map(Number);
-    where.category = { id: { in: ids } };
-  }
-
-  if (filters.sizes?.id) {
-    const ids = Object.values(filters.sizes.id).map(Number);
-    where.sizes = { some: { id: { in: ids } } };
-  }
-
-  if (filters.brand?.id) where.brandId = { in: Object.values(filters.brand.id).map(Number) };
-  if (filters.color?.id) where.colorId = { in: Object.values(filters.color.id).map(Number) };
-  if (filters.gender?.id) where.genderId = { in: Object.values(filters.gender.id).map(Number) };
-
-  if (filters.name?.$contains) {
-    where.name = { contains: filters.name.$contains, mode: 'insensitive' };
-  }
-
-  const [products, total] = await Promise.all([
-    this.prisma.product.findMany({
-      where,
-      orderBy,
-      take: pageSize,
-      skip: skip,
-      include: {
-        images: { include: { media: true } },
-        brand: true,
-        category: true,
-        color: true,
-        gender: true,
-        sizes: true,
-      },
-    }),
-    this.prisma.product.count({ where }),
-  ]);
-
-  return {
-    data: products.map((p) => this.mapToStrapi(p)),
-    meta: {
-      pagination: { page, pageSize, total, pageCount: Math.ceil(total / pageSize) },
-    },
-  };
-}
-
 
   async findOne(id: number) {
     const p = await this.prisma.product.findUnique({
@@ -256,7 +275,23 @@ async findAll(rawQuery: any) {
     return this.mapToStrapi(p);
   }
 
-  async update(id: number, dto: any, files: Express.Multer.File[] = []) {
+  async update(
+    id: number,
+    dto: any,
+    files: Express.Multer.File[] = [],
+    authUserId: number,
+  ) {
+    const existingProduct = await this.prisma.product.findUnique({
+      where: { id },
+    });
+
+    if (!existingProduct) {
+      throw new NotFoundException(`Product with ID ${id} not found`);
+    }
+
+    if (existingProduct.userId !== authUserId) {
+      throw new ForbiddenException('You are not allowed to edit this product!');
+    }
     const {
       deletedImageIds,
       sizes,
@@ -332,7 +367,6 @@ async findAll(rawQuery: any) {
           category: categories ? { connect: { id: +categories } } : undefined,
           color: color ? { connect: { id: +color } } : undefined,
           gender: gender ? { connect: { id: +gender } } : undefined,
-          user: userID ? { connect: { id: +userID } } : undefined,
           sizes: { set: sizesArray.map((sId) => ({ id: sId })) },
         },
         include: {

@@ -10,9 +10,12 @@ import {
   UploadedFiles,
   ParseIntPipe,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import { ProductsService } from './products.service';
 import { FilesInterceptor } from '@nestjs/platform-express';
+import { GetUser } from 'src/auth/decorator';
+import { JwtGuard } from 'src/auth/guard';
 
 @Controller('products')
 export class ProductsController {
@@ -39,15 +42,17 @@ export class ProductsController {
   }
 
   @Put(':id')
+  @UseGuards(JwtGuard)
   @UseInterceptors(FilesInterceptor('files'))
   async update(
     @Param('id', ParseIntPipe) id: number,
     @UploadedFiles() files: Express.Multer.File[] = [],
     @Body() dto: any,
+    @GetUser('id') authUserId: number,
   ) {
     const updateProductDto = dto.data ? dto.data : dto;
 
-    return this.productsService.update(id, updateProductDto, files);
+    return this.productsService.update(id, updateProductDto, files, authUserId);
   }
 
   @Delete(':id')
