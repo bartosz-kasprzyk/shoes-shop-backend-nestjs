@@ -39,7 +39,7 @@ async function main() {
     await prisma.size.upsert({ where: { name }, update: {}, create: { name } });
   }
 
-  const colors = ['Black', 'White', 'Red', 'Blue', 'Green', 'Grey', 'Multi'];
+  const colors = ['Black', 'White', 'Red', 'Pink', 'Orange', 'Blue', 'Green', 'Grey', 'Multi'];
   for (const name of colors) {
     await prisma.color.upsert({
       where: { name },
