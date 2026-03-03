@@ -230,6 +230,22 @@ export class ProductsService {
       where.name = { contains: filters.name.$contains, mode: 'insensitive' };
     }
 
+    if (filters.$or && Array.isArray(filters.$or)) {
+  where.OR = filters.$or.map((condition: any) => {
+    const field = Object.keys(condition)[0];
+    const operatorObj = condition[field];
+    
+    const searchTerm = operatorObj.$contains || operatorObj.$containsi;
+    
+    return {
+      [field]: { 
+        contains: searchTerm, 
+        mode: 'insensitive' 
+      }
+    };
+  });
+}
+
     const [products, total] = await Promise.all([
       this.prisma.product.findMany({
         where,
