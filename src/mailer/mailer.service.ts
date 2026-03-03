@@ -61,10 +61,8 @@ export class MailerServiceImplementation {
         userId: 'me',
         requestBody: { raw: encodedMessage },
       });
-
-      console.log(`✅ Success! Mail [${subject}] sent to: ${to}`);
     } catch (error) {
-      console.error('❌ Error:', error.message);
+      console.error('Error:', error.message);
       throw error;
     }
   }
