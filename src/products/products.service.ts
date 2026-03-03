@@ -172,6 +172,10 @@ export class ProductsService {
 
     const where: any = {};
 
+    if (filters.userID?.id) {
+      where.userId = Number(filters.userID.id);
+    }
+
     let minPrice: number | null = null;
     let maxPrice: number | null = null;
 
