@@ -12,7 +12,8 @@ async function main() {
     'Converse',
     'HUGO BOSS',
     'ASICS',
-    'Lowa'
+    'Lowa',
+    'Christian Louboutin'
   ];
   for (const name of brands) {
     await prisma.brand.upsert({
